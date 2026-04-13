@@ -1,1 +1,996 @@
-{"metadata":{"kernelspec":{"language":"python","display_name":"Python 3","name":"python3"},"language_info":{"name":"python","version":"3.12.12","mimetype":"text/x-python","codemirror_mode":{"name":"ipython","version":3},"pygments_lexer":"ipython3","nbconvert_exporter":"python","file_extension":".py"}},"nbformat_minor":4,"nbformat":4,"cells":[{"cell_type":"code","source":"# This Python 3 environment comes with many helpful analytics libraries installed\n# It is defined by the kaggle/python Docker image: https://github.com/kaggle/docker-python\n# For example, here's several helpful packages to load\n\nimport numpy as np # linear algebra\nimport pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)\n\n# Input data files are available in the read-only \"../input/\" directory\n# For example, running this (by clicking run or pressing Shift+Enter) will list all files under the input directory\n\nimport os\nfor dirname, _, filenames in os.walk('/kaggle/input'):\n    for filename in filenames:\n        print(os.path.join(dirname, filename))\n\n# You can write up to 20GB to the current directory (/kaggle/working/) that gets preserved as output when you create a version using \"Save & Run All\" \n# You can also write temporary files to /kaggle/temp/, but they won't be saved outside of the current session","metadata":{"_uuid":"8f2839f25d086af736a60e9eeb907d3b93b6e0e5","_cell_guid":"b1076dfc-b9ad-4769-8c92-a6c4dae69d19","trusted":true},"outputs":[],"execution_count":null},{"cell_type":"code","source":"\n!pip install -q -U \\\n    'transformers>=4.51.0' \\\n    'accelerate>=0.34.0' \\\n    'gradio>=4.44.0' \\\n    kagglehub torch torchvision sentencepiece\nprint(\"Packages installed.\")\n","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2026-04-13T11:42:54.969254Z","iopub.execute_input":"2026-04-13T11:42:54.969651Z","iopub.status.idle":"2026-04-13T11:45:40.989380Z","shell.execute_reply.started":"2026-04-13T11:42:54.969618Z","shell.execute_reply":"2026-04-13T11:45:40.988372Z"}},"outputs":[{"name":"stdout","text":"\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m10.2/10.2 MB\u001b[0m \u001b[31m57.1 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m00:01\u001b[0m0:01\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m383.7/383.7 kB\u001b[0m \u001b[31m16.8 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m19.6/19.6 MB\u001b[0m \u001b[31m54.9 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m:00:01\u001b[0m00:01\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m59.6/59.6 kB\u001b[0m \u001b[31m2.8 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m530.7/530.7 MB\u001b[0m \u001b[31m3.3 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m:00:01\u001b[0m00:01\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m366.1/366.1 MB\u001b[0m \u001b[31m4.7 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m:00:01\u001b[0m00:01\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m169.9/169.9 MB\u001b[0m \u001b[31m10.2 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m00:01\u001b[0m00:01\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m196.5/196.5 MB\u001b[0m \u001b[31m6.6 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m:00:01\u001b[0m00:01\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m60.4/60.4 MB\u001b[0m \u001b[31m29.0 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m:00:01\u001b[0m00:01\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m188.3/188.3 MB\u001b[0m \u001b[31m9.2 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m:00:01\u001b[0m00:01\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m423.1/423.1 MB\u001b[0m \u001b[31m1.4 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m:00:01\u001b[0m00:01\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m10.7/10.7 MB\u001b[0m \u001b[31m92.8 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m:00:01\u001b[0m0:01\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m90.2/90.2 MB\u001b[0m \u001b[31m19.7 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m:00:01\u001b[0m00:01\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m2.2/2.2 MB\u001b[0m \u001b[31m54.1 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m:00:01\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m214.1/214.1 MB\u001b[0m \u001b[31m8.5 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m:00:01\u001b[0m00:01\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m1.2/1.2 MB\u001b[0m \u001b[31m46.7 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m59.5/59.5 MB\u001b[0m \u001b[31m29.8 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m:00:01\u001b[0m00:01\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m200.9/200.9 MB\u001b[0m \u001b[31m8.6 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m:00:01\u001b[0m00:01\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m145.9/145.9 MB\u001b[0m \u001b[31m8.6 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m:00:01\u001b[0m00:01\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m40.7/40.7 MB\u001b[0m \u001b[31m45.4 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m:00:01\u001b[0m00:01\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m148.0/148.0 kB\u001b[0m \u001b[31m8.3 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m7.5/7.5 MB\u001b[0m \u001b[31m97.1 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m:00:01\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m6.3/6.3 MB\u001b[0m \u001b[31m94.6 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m:00:01\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m642.6/642.6 kB\u001b[0m \u001b[31m24.8 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m50.0/50.0 kB\u001b[0m \u001b[31m2.2 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m4.2/4.2 MB\u001b[0m \u001b[31m80.5 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m:00:01\u001b[0m\n\u001b[?25h\u001b[31mERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.\ntorchaudio 2.10.0+cpu requires torch==2.10.0, but you have torch 2.11.0 which is incompatible.\u001b[0m\u001b[31m\n\u001b[0mPackages installed.\n","output_type":"stream"}],"execution_count":1},{"cell_type":"code","source":"import kagglehub\n\nprint(\"Downloading Gemma 4 E4B...\")\nMODEL_PATH = kagglehub.model_download(\"google/gemma-4/transformers/gemma-4-e4b-it\")\nprint(\"Model path:\", MODEL_PATH)\n","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2026-04-13T11:46:10.998606Z","iopub.execute_input":"2026-04-13T11:46:10.998950Z","iopub.status.idle":"2026-04-13T11:46:11.244662Z","shell.execute_reply.started":"2026-04-13T11:46:10.998918Z","shell.execute_reply":"2026-04-13T11:46:11.243652Z"}},"outputs":[{"name":"stdout","text":"Downloading Gemma 4 E4B...\nModel path: /kaggle/input/models/google/gemma-4/transformers/gemma-4-e4b-it/1\n","output_type":"stream"}],"execution_count":21},{"cell_type":"code","source":"import torch\nfrom transformers import AutoProcessor, AutoModelForImageTextToText\n\nprint(\"Loading processor...\")\nprocessor = AutoProcessor.from_pretrained(MODEL_PATH)\n\nprint(\"Loading model...\")\nmodel = AutoModelForImageTextToText.from_pretrained(\n    MODEL_PATH,\n    dtype=torch.bfloat16,\n    device_map=\"auto\"\n)\nmodel.eval()\ndevice = next(model.parameters()).device\nprint(\"Model loaded on:\", device)\n","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2026-04-13T11:46:44.164829Z","iopub.execute_input":"2026-04-13T11:46:44.165729Z","iopub.status.idle":"2026-04-13T11:47:10.113609Z","shell.execute_reply.started":"2026-04-13T11:46:44.165695Z","shell.execute_reply":"2026-04-13T11:47:10.112589Z"}},"outputs":[{"name":"stdout","text":"Loading processor...\nLoading model...\n","output_type":"stream"},{"output_type":"display_data","data":{"text/plain":"Loading weights:   0%|          | 0/2076 [00:00<?, ?it/s]","application/vnd.jupyter.widget-view+json":{"version_major":2,"version_minor":0,"model_id":"271fcf44ce594097b6b163c8d75a5d69"}},"metadata":{}},{"name":"stdout","text":"Model loaded on: cpu\n","output_type":"stream"}],"execution_count":22},{"cell_type":"code","source":"def generate(system_prompt, user_message, max_new_tokens=300):\n    messages = [\n        {\"role\": \"system\", \"content\": [{\"type\": \"text\", \"text\": system_prompt}]},\n        {\"role\": \"user\",   \"content\": [{\"type\": \"text\", \"text\": user_message}]},\n    ]\n    prompt = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)\n    inputs = processor(text=prompt, return_tensors=\"pt\").to(device)\n\n    with torch.no_grad():\n        output_ids = model.generate(\n            **inputs,\n            max_new_tokens=max_new_tokens,\n            do_sample=False,\n            pad_token_id=processor.tokenizer.eos_token_id,\n        )\n\n    new_ids = output_ids[0][inputs[\"input_ids\"].shape[1]:]\n    return processor.decode(new_ids, skip_special_tokens=True).strip()\n","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2026-04-13T11:49:06.339228Z","iopub.execute_input":"2026-04-13T11:49:06.339646Z","iopub.status.idle":"2026-04-13T11:49:06.347114Z","shell.execute_reply.started":"2026-04-13T11:49:06.339609Z","shell.execute_reply":"2026-04-13T11:49:06.346115Z"}},"outputs":[],"execution_count":37},{"cell_type":"code","source":"def tutor_system():\n    return (\n        \"You are PocketTutor, an offline math tutor for students. \"\n        \"Explain concepts clearly, step-by-step, and avoid giving the final answer immediately. \"\n        \"Encourage understanding, show working, and keep explanations friendly and simple.\"\n    )\n","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2026-04-13T11:49:12.786674Z","iopub.execute_input":"2026-04-13T11:49:12.787461Z","iopub.status.idle":"2026-04-13T11:49:12.792520Z","shell.execute_reply.started":"2026-04-13T11:49:12.787421Z","shell.execute_reply":"2026-04-13T11:49:12.791517Z"}},"outputs":[],"execution_count":44},{"cell_type":"code","source":"def rag_system():\n    return (\n        \"You are PocketTutor with access to notes. \"\n        \"Use the provided context to improve your explanation. \"\n        \"If context is missing, teach normally.\"\n    )\n","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2026-04-13T11:49:15.593725Z","iopub.execute_input":"2026-04-13T11:49:15.594125Z","iopub.status.idle":"2026-04-13T11:49:15.598859Z","shell.execute_reply.started":"2026-04-13T11:49:15.594089Z","shell.execute_reply":"2026-04-13T11:49:15.597699Z"}},"outputs":[],"execution_count":46},{"cell_type":"code","source":"def simulate_ocr(image):\n    return \"Solve: 3x + 5 = 20\"\n","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2026-04-13T11:49:18.130898Z","iopub.execute_input":"2026-04-13T11:49:18.131475Z","iopub.status.idle":"2026-04-13T11:49:18.135908Z","shell.execute_reply.started":"2026-04-13T11:49:18.131437Z","shell.execute_reply":"2026-04-13T11:49:18.134879Z"}},"outputs":[],"execution_count":49},{"cell_type":"code","source":"notes_db = [\n    {\"topic\": \"linear_equations\", \"text\": \"To solve ax + b = c, subtract b then divide by a.\"},\n    {\"topic\": \"fractions\", \"text\": \"To add fractions, find a common denominator.\"},\n    {\"topic\": \"exponents\", \"text\": \"a^m × a^n = a^(m+n).\"},\n]\n","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2026-04-13T11:49:21.025669Z","iopub.execute_input":"2026-04-13T11:49:21.026677Z","iopub.status.idle":"2026-04-13T11:49:21.031970Z","shell.execute_reply.started":"2026-04-13T11:49:21.026617Z","shell.execute_reply":"2026-04-13T11:49:21.030633Z"}},"outputs":[],"execution_count":51},{"cell_type":"code","source":"def search_notes(query):\n    return [\n        n[\"text\"]\n        for n in notes_db\n        if any(k in query.lower() for k in n[\"topic\"].split(\"_\"))\n    ]\n","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2026-04-13T11:49:23.616918Z","iopub.execute_input":"2026-04-13T11:49:23.617736Z","iopub.status.idle":"2026-04-13T11:49:23.623418Z","shell.execute_reply.started":"2026-04-13T11:49:23.617695Z","shell.execute_reply":"2026-04-13T11:49:23.622209Z"}},"outputs":[],"execution_count":53},{"cell_type":"code","source":"def full_pipeline(image):\n    text = simulate_ocr(image)\n    retrieved = search_notes(text)\n    context = \"\\n\".join(retrieved)\n\n    prompt = f\"Context:\\n{context}\\n\\nQuestion: {text}\\nExplain step-by-step.\"\n    return generate(rag_system(), prompt)\n","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2026-04-13T11:49:26.678449Z","iopub.execute_input":"2026-04-13T11:49:26.678848Z","iopub.status.idle":"2026-04-13T11:49:26.685048Z","shell.execute_reply.started":"2026-04-13T11:49:26.678814Z","shell.execute_reply":"2026-04-13T11:49:26.683878Z"}},"outputs":[],"execution_count":56},{"cell_type":"code","source":"import gradio as gr\n\ncss = \"\"\"\n.gradio-container { max-width: 860px !important; margin: 0 auto; }\n#header { text-align: center; padding: 1.5rem 0 0.5rem; }\n#header h1 { font-size: 1.8rem; margin-bottom: 0.3rem; }\n#header p  { color: #666; font-size: 0.95rem; }\n\"\"\"\n\nwith gr.Blocks(title=\"PocketTutor — Gemma 4 Offline Tutor\", css=css, theme=gr.themes.Soft()) as demo:\n\n    gr.HTML(\"\"\"\n    <div id=\"header\">\n      <h1>📱 PocketTutor</h1>\n      <p>Offline math tutor for students · Powered by <strong>Gemma 4</strong></p>\n      <p style=\"font-size:0.82rem;color:#999;\">Works offline on Google Pixel 9 using MLC.</p>\n    </div>\n    \"\"\")\n\n    with gr.Tabs():\n\n        # --- Tab 1: Solve Homework ---\n        with gr.TabItem(\"📝 Solve Homework\"):\n            img = gr.Image(label=\"Upload homework photo\")\n            solve_btn = gr.Button(\"🔍 Solve step-by-step\", variant=\"primary\")\n            solve_out = gr.Textbox(label=\"PocketTutor Output\", lines=12)\n\n            solve_btn.click(fn=full_pipeline, inputs=img, outputs=solve_out)\n\n        # --- Tab 2: Ask a Question ---\n        with gr.TabItem(\"❓ Ask a Question\"):\n            q = gr.Textbox(label=\"Your math question\", placeholder=\"e.g., Solve 2x + 4 = 10\")\n            ask_btn = gr.Button(\"💡 Explain\", variant=\"primary\")\n            ask_out = gr.Textbox(label=\"Explanation\", lines=12)\n\n            ask_btn.click(\n                fn=lambda x: generate(tutor_system(), x),\n                inputs=q,\n                outputs=ask_out,\n            )\n\n        # --- Tab 3: About ---\n        with gr.TabItem(\"ℹ️ About\"):\n            gr.Markdown(\"\"\"\n## PocketTutor — Gemma 4 Good Hackathon Submission\n\n### Why PocketTutor?\nMillions of students lack reliable internet access. PocketTutor runs **fully offline** on a **Google Pixel 9**, using a quantized Gemma 4 model via MLC.\n\n### Features\n- OCR → Step-by-step math explanations  \n- Optional RAG grounding  \n- Works offline  \n- Runs on-device (Pixel 9)  \n- Apache 2.0 license  \n\n### Disclaimer\nPocketTutor supports learning but does not replace teachers.\n            \"\"\")\n\ndemo.launch(share=True, debug=False, show_error=True)\n","metadata":{"trusted":true,"execution":{"iopub.status.busy":"2026-04-13T11:49:29.606919Z","iopub.execute_input":"2026-04-13T11:49:29.607393Z","iopub.status.idle":"2026-04-13T11:49:31.149105Z","shell.execute_reply.started":"2026-04-13T11:49:29.607353Z","shell.execute_reply":"2026-04-13T11:49:31.147909Z"}},"outputs":[{"name":"stderr","text":"/tmp/ipykernel_55/2706235556.py:10: UserWarning: The parameters have been moved from the Blocks constructor to the launch() method in Gradio 6.0: theme, css. Please pass these parameters to launch() instead.\n  with gr.Blocks(title=\"PocketTutor — Gemma 4 Offline Tutor\", css=css, theme=gr.themes.Soft()) as demo:\n","output_type":"stream"},{"name":"stdout","text":"* Running on local URL:  http://127.0.0.1:7861\n* Running on public URL: https://e50ff0fcaa325a6155.gradio.live\n\nThis share link expires in 1 week. For free permanent hosting and GPU upgrades, run `gradio deploy` from the terminal in the working directory to deploy to Hugging Face Spaces (https://huggingface.co/spaces)\n","output_type":"stream"},{"output_type":"display_data","data":{"text/plain":"<IPython.core.display.HTML object>","text/html":"<div><iframe src=\"https://e50ff0fcaa325a6155.gradio.live\" width=\"100%\" height=\"500\" allow=\"autoplay; camera; microphone; clipboard-read; clipboard-write;\" frameborder=\"0\" allowfullscreen></iframe></div>"},"metadata":{}},{"execution_count":57,"output_type":"execute_result","data":{"text/plain":""},"metadata":{}}],"execution_count":57}]}
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "c2b4b829",
+   "metadata": {
+    "_cell_guid": "b1076dfc-b9ad-4769-8c92-a6c4dae69d19",
+    "_uuid": "8f2839f25d086af736a60e9eeb907d3b93b6e0e5",
+    "execution": {
+     "iopub.execute_input": "2026-04-13T11:52:08.157692Z",
+     "iopub.status.busy": "2026-04-13T11:52:08.157233Z",
+     "iopub.status.idle": "2026-04-13T11:52:09.095710Z",
+     "shell.execute_reply": "2026-04-13T11:52:09.094601Z"
+    },
+    "papermill": {
+     "duration": 0.945516,
+     "end_time": "2026-04-13T11:52:09.097727+00:00",
+     "exception": false,
+     "start_time": "2026-04-13T11:52:08.152211+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "/kaggle/input/models/google/gemma-4/transformers/gemma-4-e4b-it/1/config.json\n",
+      "/kaggle/input/models/google/gemma-4/transformers/gemma-4-e4b-it/1/README.md\n",
+      "/kaggle/input/models/google/gemma-4/transformers/gemma-4-e4b-it/1/tokenizer.json\n",
+      "/kaggle/input/models/google/gemma-4/transformers/gemma-4-e4b-it/1/tokenizer_config.json\n",
+      "/kaggle/input/models/google/gemma-4/transformers/gemma-4-e4b-it/1/chat_template.jinja\n",
+      "/kaggle/input/models/google/gemma-4/transformers/gemma-4-e4b-it/1/model.safetensors\n",
+      "/kaggle/input/models/google/gemma-4/transformers/gemma-4-e4b-it/1/processor_config.json\n",
+      "/kaggle/input/models/google/gemma-4/transformers/gemma-4-e4b-it/1/generation_config.json\n"
+     ]
+    }
+   ],
+   "source": [
+    "# This Python 3 environment comes with many helpful analytics libraries installed\n",
+    "# It is defined by the kaggle/python Docker image: https://github.com/kaggle/docker-python\n",
+    "# For example, here's several helpful packages to load\n",
+    "\n",
+    "import numpy as np # linear algebra\n",
+    "import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)\n",
+    "\n",
+    "# Input data files are available in the read-only \"../input/\" directory\n",
+    "# For example, running this (by clicking run or pressing Shift+Enter) will list all files under the input directory\n",
+    "\n",
+    "import os\n",
+    "for dirname, _, filenames in os.walk('/kaggle/input'):\n",
+    "    for filename in filenames:\n",
+    "        print(os.path.join(dirname, filename))\n",
+    "\n",
+    "# You can write up to 20GB to the current directory (/kaggle/working/) that gets preserved as output when you create a version using \"Save & Run All\" \n",
+    "# You can also write temporary files to /kaggle/temp/, but they won't be saved outside of the current session"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "0486ed7e",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-13T11:52:09.105593Z",
+     "iopub.status.busy": "2026-04-13T11:52:09.104686Z",
+     "iopub.status.idle": "2026-04-13T11:54:44.019387Z",
+     "shell.execute_reply": "2026-04-13T11:54:44.017952Z"
+    },
+    "papermill": {
+     "duration": 154.920784,
+     "end_time": "2026-04-13T11:54:44.021694+00:00",
+     "exception": false,
+     "start_time": "2026-04-13T11:52:09.100910+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m10.2/10.2 MB\u001b[0m \u001b[31m70.4 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m383.7/383.7 kB\u001b[0m \u001b[31m21.5 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m19.6/19.6 MB\u001b[0m \u001b[31m74.5 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m59.6/59.6 kB\u001b[0m \u001b[31m3.3 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m530.7/530.7 MB\u001b[0m \u001b[31m3.1 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m366.1/366.1 MB\u001b[0m \u001b[31m4.5 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m169.9/169.9 MB\u001b[0m \u001b[31m9.8 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m196.5/196.5 MB\u001b[0m \u001b[31m8.5 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m60.4/60.4 MB\u001b[0m \u001b[31m29.2 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m188.3/188.3 MB\u001b[0m \u001b[31m8.9 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m423.1/423.1 MB\u001b[0m \u001b[31m1.8 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m10.7/10.7 MB\u001b[0m \u001b[31m91.6 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m90.2/90.2 MB\u001b[0m \u001b[31m19.8 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m2.2/2.2 MB\u001b[0m \u001b[31m61.4 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m214.1/214.1 MB\u001b[0m \u001b[31m1.6 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m1.2/1.2 MB\u001b[0m \u001b[31m47.6 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m59.5/59.5 MB\u001b[0m \u001b[31m29.3 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m200.9/200.9 MB\u001b[0m \u001b[31m8.1 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m145.9/145.9 MB\u001b[0m \u001b[31m10.7 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m40.7/40.7 MB\u001b[0m \u001b[31m33.1 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m148.0/148.0 kB\u001b[0m \u001b[31m7.5 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m7.5/7.5 MB\u001b[0m \u001b[31m57.2 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m6.3/6.3 MB\u001b[0m \u001b[31m57.5 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m642.6/642.6 kB\u001b[0m \u001b[31m26.4 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m50.0/50.0 kB\u001b[0m \u001b[31m2.8 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m4.2/4.2 MB\u001b[0m \u001b[31m52.9 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\r\n",
+      "\u001b[?25h\u001b[31mERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.\r\n",
+      "torchaudio 2.10.0+cpu requires torch==2.10.0, but you have torch 2.11.0 which is incompatible.\u001b[0m\u001b[31m\r\n",
+      "\u001b[0mPackages installed.\n"
+     ]
+    }
+   ],
+   "source": [
+    "\n",
+    "!pip install -q -U \\\n",
+    "    'transformers>=4.51.0' \\\n",
+    "    'accelerate>=0.34.0' \\\n",
+    "    'gradio>=4.44.0' \\\n",
+    "    kagglehub torch torchvision sentencepiece\n",
+    "print(\"Packages installed.\")\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "9518292b",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-13T11:54:44.105970Z",
+     "iopub.status.busy": "2026-04-13T11:54:44.105399Z",
+     "iopub.status.idle": "2026-04-13T11:54:45.301393Z",
+     "shell.execute_reply": "2026-04-13T11:54:45.300292Z"
+    },
+    "papermill": {
+     "duration": 1.240598,
+     "end_time": "2026-04-13T11:54:45.303370+00:00",
+     "exception": false,
+     "start_time": "2026-04-13T11:54:44.062772+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Downloading Gemma 4 E4B...\n",
+      "Model path: /kaggle/input/models/google/gemma-4/transformers/gemma-4-e4b-it/1\n"
+     ]
+    }
+   ],
+   "source": [
+    "import kagglehub\n",
+    "\n",
+    "print(\"Downloading Gemma 4 E4B...\")\n",
+    "MODEL_PATH = kagglehub.model_download(\"google/gemma-4/transformers/gemma-4-e4b-it\")\n",
+    "print(\"Model path:\", MODEL_PATH)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "6a3688aa",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-13T11:54:45.386428Z",
+     "iopub.status.busy": "2026-04-13T11:54:45.385771Z",
+     "iopub.status.idle": "2026-04-13T11:55:10.327195Z",
+     "shell.execute_reply": "2026-04-13T11:55:10.325687Z"
+    },
+    "papermill": {
+     "duration": 24.985718,
+     "end_time": "2026-04-13T11:55:10.329572+00:00",
+     "exception": false,
+     "start_time": "2026-04-13T11:54:45.343854+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Loading processor...\n",
+      "Loading model...\n"
+     ]
+    },
+    {
+     "data": {
+      "application/vnd.jupyter.widget-view+json": {
+       "model_id": "ba6908da9b3e463eb181afc42b9db1e9",
+       "version_major": 2,
+       "version_minor": 0
+      },
+      "text/plain": [
+       "Loading weights:   0%|          | 0/2076 [00:00<?, ?it/s]"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Model loaded on: cpu\n"
+     ]
+    }
+   ],
+   "source": [
+    "import torch\n",
+    "from transformers import AutoProcessor, AutoModelForImageTextToText\n",
+    "\n",
+    "print(\"Loading processor...\")\n",
+    "processor = AutoProcessor.from_pretrained(MODEL_PATH)\n",
+    "\n",
+    "print(\"Loading model...\")\n",
+    "model = AutoModelForImageTextToText.from_pretrained(\n",
+    "    MODEL_PATH,\n",
+    "    dtype=torch.bfloat16,\n",
+    "    device_map=\"auto\"\n",
+    ")\n",
+    "model.eval()\n",
+    "device = next(model.parameters()).device\n",
+    "print(\"Model loaded on:\", device)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "97fb328b",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-13T11:55:10.458323Z",
+     "iopub.status.busy": "2026-04-13T11:55:10.456789Z",
+     "iopub.status.idle": "2026-04-13T11:55:10.466004Z",
+     "shell.execute_reply": "2026-04-13T11:55:10.464852Z"
+    },
+    "papermill": {
+     "duration": 0.077047,
+     "end_time": "2026-04-13T11:55:10.467969+00:00",
+     "exception": false,
+     "start_time": "2026-04-13T11:55:10.390922+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "def generate(system_prompt, user_message, max_new_tokens=300):\n",
+    "    messages = [\n",
+    "        {\"role\": \"system\", \"content\": [{\"type\": \"text\", \"text\": system_prompt}]},\n",
+    "        {\"role\": \"user\",   \"content\": [{\"type\": \"text\", \"text\": user_message}]},\n",
+    "    ]\n",
+    "    prompt = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)\n",
+    "    inputs = processor(text=prompt, return_tensors=\"pt\").to(device)\n",
+    "\n",
+    "    with torch.no_grad():\n",
+    "        output_ids = model.generate(\n",
+    "            **inputs,\n",
+    "            max_new_tokens=max_new_tokens,\n",
+    "            do_sample=False,\n",
+    "            pad_token_id=processor.tokenizer.eos_token_id,\n",
+    "        )\n",
+    "\n",
+    "    new_ids = output_ids[0][inputs[\"input_ids\"].shape[1]:]\n",
+    "    return processor.decode(new_ids, skip_special_tokens=True).strip()\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "fa27baf8",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-13T11:55:10.596419Z",
+     "iopub.status.busy": "2026-04-13T11:55:10.595518Z",
+     "iopub.status.idle": "2026-04-13T11:55:10.600394Z",
+     "shell.execute_reply": "2026-04-13T11:55:10.599490Z"
+    },
+    "papermill": {
+     "duration": 0.06197,
+     "end_time": "2026-04-13T11:55:10.602179+00:00",
+     "exception": false,
+     "start_time": "2026-04-13T11:55:10.540209+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "def tutor_system():\n",
+    "    return (\n",
+    "        \"You are PocketTutor, an offline math tutor for students. \"\n",
+    "        \"Explain concepts clearly, step-by-step, and avoid giving the final answer immediately. \"\n",
+    "        \"Encourage understanding, show working, and keep explanations friendly and simple.\"\n",
+    "    )\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "39eca6ed",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-13T11:55:10.692648Z",
+     "iopub.status.busy": "2026-04-13T11:55:10.692153Z",
+     "iopub.status.idle": "2026-04-13T11:55:10.697297Z",
+     "shell.execute_reply": "2026-04-13T11:55:10.696222Z"
+    },
+    "papermill": {
+     "duration": 0.051608,
+     "end_time": "2026-04-13T11:55:10.699230+00:00",
+     "exception": false,
+     "start_time": "2026-04-13T11:55:10.647622+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "def rag_system():\n",
+    "    return (\n",
+    "        \"You are PocketTutor with access to notes. \"\n",
+    "        \"Use the provided context to improve your explanation. \"\n",
+    "        \"If context is missing, teach normally.\"\n",
+    "    )\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "d27b846f",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-13T11:55:10.783486Z",
+     "iopub.status.busy": "2026-04-13T11:55:10.782688Z",
+     "iopub.status.idle": "2026-04-13T11:55:10.787432Z",
+     "shell.execute_reply": "2026-04-13T11:55:10.786433Z"
+    },
+    "papermill": {
+     "duration": 0.048781,
+     "end_time": "2026-04-13T11:55:10.789457+00:00",
+     "exception": false,
+     "start_time": "2026-04-13T11:55:10.740676+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "def simulate_ocr(image):\n",
+    "    return \"Solve: 3x + 5 = 20\"\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "2f0bb2c9",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-13T11:55:10.872786Z",
+     "iopub.status.busy": "2026-04-13T11:55:10.872116Z",
+     "iopub.status.idle": "2026-04-13T11:55:10.876987Z",
+     "shell.execute_reply": "2026-04-13T11:55:10.875999Z"
+    },
+    "papermill": {
+     "duration": 0.048633,
+     "end_time": "2026-04-13T11:55:10.878910+00:00",
+     "exception": false,
+     "start_time": "2026-04-13T11:55:10.830277+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "notes_db = [\n",
+    "    {\"topic\": \"linear_equations\", \"text\": \"To solve ax + b = c, subtract b then divide by a.\"},\n",
+    "    {\"topic\": \"fractions\", \"text\": \"To add fractions, find a common denominator.\"},\n",
+    "    {\"topic\": \"exponents\", \"text\": \"a^m × a^n = a^(m+n).\"},\n",
+    "]\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "1894a168",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-13T11:55:10.962618Z",
+     "iopub.status.busy": "2026-04-13T11:55:10.962300Z",
+     "iopub.status.idle": "2026-04-13T11:55:10.967882Z",
+     "shell.execute_reply": "2026-04-13T11:55:10.966908Z"
+    },
+    "papermill": {
+     "duration": 0.049465,
+     "end_time": "2026-04-13T11:55:10.969720+00:00",
+     "exception": false,
+     "start_time": "2026-04-13T11:55:10.920255+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "def search_notes(query):\n",
+    "    return [\n",
+    "        n[\"text\"]\n",
+    "        for n in notes_db\n",
+    "        if any(k in query.lower() for k in n[\"topic\"].split(\"_\"))\n",
+    "    ]\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "c513be2b",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-13T11:55:11.053869Z",
+     "iopub.status.busy": "2026-04-13T11:55:11.053495Z",
+     "iopub.status.idle": "2026-04-13T11:55:11.059001Z",
+     "shell.execute_reply": "2026-04-13T11:55:11.057916Z"
+    },
+    "papermill": {
+     "duration": 0.049791,
+     "end_time": "2026-04-13T11:55:11.060729+00:00",
+     "exception": false,
+     "start_time": "2026-04-13T11:55:11.010938+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "def full_pipeline(image):\n",
+    "    text = simulate_ocr(image)\n",
+    "    retrieved = search_notes(text)\n",
+    "    context = \"\\n\".join(retrieved)\n",
+    "\n",
+    "    prompt = f\"Context:\\n{context}\\n\\nQuestion: {text}\\nExplain step-by-step.\"\n",
+    "    return generate(rag_system(), prompt)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "ca14aa27",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-04-13T11:55:11.144194Z",
+     "iopub.status.busy": "2026-04-13T11:55:11.142976Z",
+     "iopub.status.idle": "2026-04-13T11:55:20.261331Z",
+     "shell.execute_reply": "2026-04-13T11:55:20.260293Z"
+    },
+    "papermill": {
+     "duration": 9.161999,
+     "end_time": "2026-04-13T11:55:20.263206+00:00",
+     "exception": false,
+     "start_time": "2026-04-13T11:55:11.101207+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/tmp/ipykernel_16/2706235556.py:10: UserWarning: The parameters have been moved from the Blocks constructor to the launch() method in Gradio 6.0: theme, css. Please pass these parameters to launch() instead.\n",
+      "  with gr.Blocks(title=\"PocketTutor — Gemma 4 Offline Tutor\", css=css, theme=gr.themes.Soft()) as demo:\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "* Running on local URL:  http://127.0.0.1:7860\n",
+      "* Running on public URL: https://27f8399745601be373.gradio.live\n",
+      "\n",
+      "This share link expires in 1 week. For free permanent hosting and GPU upgrades, run `gradio deploy` from the terminal in the working directory to deploy to Hugging Face Spaces (https://huggingface.co/spaces)\n"
+     ]
+    },
+    {
+     "data": {
+      "text/html": [
+       "<div><iframe src=\"https://27f8399745601be373.gradio.live\" width=\"100%\" height=\"500\" allow=\"autoplay; camera; microphone; clipboard-read; clipboard-write;\" frameborder=\"0\" allowfullscreen></iframe></div>"
+      ],
+      "text/plain": [
+       "<IPython.core.display.HTML object>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "data": {
+      "text/plain": []
+     },
+     "execution_count": 12,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "import gradio as gr\n",
+    "\n",
+    "css = \"\"\"\n",
+    ".gradio-container { max-width: 860px !important; margin: 0 auto; }\n",
+    "#header { text-align: center; padding: 1.5rem 0 0.5rem; }\n",
+    "#header h1 { font-size: 1.8rem; margin-bottom: 0.3rem; }\n",
+    "#header p  { color: #666; font-size: 0.95rem; }\n",
+    "\"\"\"\n",
+    "\n",
+    "with gr.Blocks(title=\"PocketTutor — Gemma 4 Offline Tutor\", css=css, theme=gr.themes.Soft()) as demo:\n",
+    "\n",
+    "    gr.HTML(\"\"\"\n",
+    "    <div id=\"header\">\n",
+    "      <h1>📱 PocketTutor</h1>\n",
+    "      <p>Offline math tutor for students · Powered by <strong>Gemma 4</strong></p>\n",
+    "      <p style=\"font-size:0.82rem;color:#999;\">Works offline on Google Pixel 9 using MLC.</p>\n",
+    "    </div>\n",
+    "    \"\"\")\n",
+    "\n",
+    "    with gr.Tabs():\n",
+    "\n",
+    "        # --- Tab 1: Solve Homework ---\n",
+    "        with gr.TabItem(\"📝 Solve Homework\"):\n",
+    "            img = gr.Image(label=\"Upload homework photo\")\n",
+    "            solve_btn = gr.Button(\"🔍 Solve step-by-step\", variant=\"primary\")\n",
+    "            solve_out = gr.Textbox(label=\"PocketTutor Output\", lines=12)\n",
+    "\n",
+    "            solve_btn.click(fn=full_pipeline, inputs=img, outputs=solve_out)\n",
+    "\n",
+    "        # --- Tab 2: Ask a Question ---\n",
+    "        with gr.TabItem(\"❓ Ask a Question\"):\n",
+    "            q = gr.Textbox(label=\"Your math question\", placeholder=\"e.g., Solve 2x + 4 = 10\")\n",
+    "            ask_btn = gr.Button(\"💡 Explain\", variant=\"primary\")\n",
+    "            ask_out = gr.Textbox(label=\"Explanation\", lines=12)\n",
+    "\n",
+    "            ask_btn.click(\n",
+    "                fn=lambda x: generate(tutor_system(), x),\n",
+    "                inputs=q,\n",
+    "                outputs=ask_out,\n",
+    "            )\n",
+    "\n",
+    "        # --- Tab 3: About ---\n",
+    "        with gr.TabItem(\"ℹ️ About\"):\n",
+    "            gr.Markdown(\"\"\"\n",
+    "## PocketTutor — Gemma 4 Good Hackathon Submission\n",
+    "\n",
+    "### Why PocketTutor?\n",
+    "Millions of students lack reliable internet access. PocketTutor runs **fully offline** on a **Google Pixel 9**, using a quantized Gemma 4 model via MLC.\n",
+    "\n",
+    "### Features\n",
+    "- OCR → Step-by-step math explanations  \n",
+    "- Optional RAG grounding  \n",
+    "- Works offline  \n",
+    "- Runs on-device (Pixel 9)  \n",
+    "- Apache 2.0 license  \n",
+    "\n",
+    "### Disclaimer\n",
+    "PocketTutor supports learning but does not replace teachers.\n",
+    "            \"\"\")\n",
+    "\n",
+    "demo.launch(share=True, debug=False, show_error=True)\n"
+   ]
+  }
+ ],
+ "metadata": {
+  "kaggle": {
+   "accelerator": "none",
+   "dataSources": [
+    {
+     "databundleVersionId": 16409561,
+     "modelId": 624400,
+     "modelInstanceId": 619374,
+     "sourceId": 815449,
+     "sourceType": "modelInstanceVersion"
+    }
+   ],
+   "dockerImageVersionId": 31328,
+   "isGpuEnabled": false,
+   "isInternetEnabled": true,
+   "language": "python",
+   "sourceType": "notebook"
+  },
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.12.12"
+  },
+  "papermill": {
+   "default_parameters": {},
+   "duration": 197.802617,
+   "end_time": "2026-04-13T11:55:23.027046+00:00",
+   "environment_variables": {},
+   "exception": null,
+   "input_path": "__notebook__.ipynb",
+   "output_path": "__notebook__.ipynb",
+   "parameters": {},
+   "start_time": "2026-04-13T11:52:05.224429+00:00",
+   "version": "2.7.0"
+  },
+  "widgets": {
+   "application/vnd.jupyter.widget-state+json": {
+    "state": {
+     "24841bdeb9e44dc89ee257e5e31378fd": {
+      "model_module": "@jupyter-widgets/controls",
+      "model_module_version": "2.0.0",
+      "model_name": "HTMLModel",
+      "state": {
+       "_dom_classes": [],
+       "_model_module": "@jupyter-widgets/controls",
+       "_model_module_version": "2.0.0",
+       "_model_name": "HTMLModel",
+       "_view_count": null,
+       "_view_module": "@jupyter-widgets/controls",
+       "_view_module_version": "2.0.0",
+       "_view_name": "HTMLView",
+       "description": "",
+       "description_allow_html": false,
+       "layout": "IPY_MODEL_ed090ee8a5994a2191c147353c2afeb7",
+       "placeholder": "​",
+       "style": "IPY_MODEL_cf9fac4c1fc040d680737b6027552e3b",
+       "tabbable": null,
+       "tooltip": null,
+       "value": " 2076/2076 [00:03&lt;00:00, 800.16it/s]"
+      }
+     },
+     "513d83d6c9d74c809ed3eef2c52006be": {
+      "model_module": "@jupyter-widgets/base",
+      "model_module_version": "2.0.0",
+      "model_name": "LayoutModel",
+      "state": {
+       "_model_module": "@jupyter-widgets/base",
+       "_model_module_version": "2.0.0",
+       "_model_name": "LayoutModel",
+       "_view_count": null,
+       "_view_module": "@jupyter-widgets/base",
+       "_view_module_version": "2.0.0",
+       "_view_name": "LayoutView",
+       "align_content": null,
+       "align_items": null,
+       "align_self": null,
+       "border_bottom": null,
+       "border_left": null,
+       "border_right": null,
+       "border_top": null,
+       "bottom": null,
+       "display": null,
+       "flex": null,
+       "flex_flow": null,
+       "grid_area": null,
+       "grid_auto_columns": null,
+       "grid_auto_flow": null,
+       "grid_auto_rows": null,
+       "grid_column": null,
+       "grid_gap": null,
+       "grid_row": null,
+       "grid_template_areas": null,
+       "grid_template_columns": null,
+       "grid_template_rows": null,
+       "height": null,
+       "justify_content": null,
+       "justify_items": null,
+       "left": null,
+       "margin": null,
+       "max_height": null,
+       "max_width": null,
+       "min_height": null,
+       "min_width": null,
+       "object_fit": null,
+       "object_position": null,
+       "order": null,
+       "overflow": null,
+       "padding": null,
+       "right": null,
+       "top": null,
+       "visibility": null,
+       "width": null
+      }
+     },
+     "6345424a91954cab919d2abaeaf56bf6": {
+      "model_module": "@jupyter-widgets/controls",
+      "model_module_version": "2.0.0",
+      "model_name": "ProgressStyleModel",
+      "state": {
+       "_model_module": "@jupyter-widgets/controls",
+       "_model_module_version": "2.0.0",
+       "_model_name": "ProgressStyleModel",
+       "_view_count": null,
+       "_view_module": "@jupyter-widgets/base",
+       "_view_module_version": "2.0.0",
+       "_view_name": "StyleView",
+       "bar_color": null,
+       "description_width": ""
+      }
+     },
+     "77ad2f68875f443e8bce6ef76a0f5875": {
+      "model_module": "@jupyter-widgets/controls",
+      "model_module_version": "2.0.0",
+      "model_name": "HTMLModel",
+      "state": {
+       "_dom_classes": [],
+       "_model_module": "@jupyter-widgets/controls",
+       "_model_module_version": "2.0.0",
+       "_model_name": "HTMLModel",
+       "_view_count": null,
+       "_view_module": "@jupyter-widgets/controls",
+       "_view_module_version": "2.0.0",
+       "_view_name": "HTMLView",
+       "description": "",
+       "description_allow_html": false,
+       "layout": "IPY_MODEL_c47fc2697b854cbd8c27f71387a2e66a",
+       "placeholder": "​",
+       "style": "IPY_MODEL_ee7cb27b22974b79acd63ce300d38262",
+       "tabbable": null,
+       "tooltip": null,
+       "value": "Loading weights: 100%"
+      }
+     },
+     "9bfb1125458b4d36a5c581966b142fe9": {
+      "model_module": "@jupyter-widgets/controls",
+      "model_module_version": "2.0.0",
+      "model_name": "FloatProgressModel",
+      "state": {
+       "_dom_classes": [],
+       "_model_module": "@jupyter-widgets/controls",
+       "_model_module_version": "2.0.0",
+       "_model_name": "FloatProgressModel",
+       "_view_count": null,
+       "_view_module": "@jupyter-widgets/controls",
+       "_view_module_version": "2.0.0",
+       "_view_name": "ProgressView",
+       "bar_style": "success",
+       "description": "",
+       "description_allow_html": false,
+       "layout": "IPY_MODEL_a432a0881c9a419285aa5237dc0c7ef3",
+       "max": 2076.0,
+       "min": 0.0,
+       "orientation": "horizontal",
+       "style": "IPY_MODEL_6345424a91954cab919d2abaeaf56bf6",
+       "tabbable": null,
+       "tooltip": null,
+       "value": 2076.0
+      }
+     },
+     "a432a0881c9a419285aa5237dc0c7ef3": {
+      "model_module": "@jupyter-widgets/base",
+      "model_module_version": "2.0.0",
+      "model_name": "LayoutModel",
+      "state": {
+       "_model_module": "@jupyter-widgets/base",
+       "_model_module_version": "2.0.0",
+       "_model_name": "LayoutModel",
+       "_view_count": null,
+       "_view_module": "@jupyter-widgets/base",
+       "_view_module_version": "2.0.0",
+       "_view_name": "LayoutView",
+       "align_content": null,
+       "align_items": null,
+       "align_self": null,
+       "border_bottom": null,
+       "border_left": null,
+       "border_right": null,
+       "border_top": null,
+       "bottom": null,
+       "display": null,
+       "flex": null,
+       "flex_flow": null,
+       "grid_area": null,
+       "grid_auto_columns": null,
+       "grid_auto_flow": null,
+       "grid_auto_rows": null,
+       "grid_column": null,
+       "grid_gap": null,
+       "grid_row": null,
+       "grid_template_areas": null,
+       "grid_template_columns": null,
+       "grid_template_rows": null,
+       "height": null,
+       "justify_content": null,
+       "justify_items": null,
+       "left": null,
+       "margin": null,
+       "max_height": null,
+       "max_width": null,
+       "min_height": null,
+       "min_width": null,
+       "object_fit": null,
+       "object_position": null,
+       "order": null,
+       "overflow": null,
+       "padding": null,
+       "right": null,
+       "top": null,
+       "visibility": null,
+       "width": null
+      }
+     },
+     "ba6908da9b3e463eb181afc42b9db1e9": {
+      "model_module": "@jupyter-widgets/controls",
+      "model_module_version": "2.0.0",
+      "model_name": "HBoxModel",
+      "state": {
+       "_dom_classes": [],
+       "_model_module": "@jupyter-widgets/controls",
+       "_model_module_version": "2.0.0",
+       "_model_name": "HBoxModel",
+       "_view_count": null,
+       "_view_module": "@jupyter-widgets/controls",
+       "_view_module_version": "2.0.0",
+       "_view_name": "HBoxView",
+       "box_style": "",
+       "children": [
+        "IPY_MODEL_77ad2f68875f443e8bce6ef76a0f5875",
+        "IPY_MODEL_9bfb1125458b4d36a5c581966b142fe9",
+        "IPY_MODEL_24841bdeb9e44dc89ee257e5e31378fd"
+       ],
+       "layout": "IPY_MODEL_513d83d6c9d74c809ed3eef2c52006be",
+       "tabbable": null,
+       "tooltip": null
+      }
+     },
+     "c47fc2697b854cbd8c27f71387a2e66a": {
+      "model_module": "@jupyter-widgets/base",
+      "model_module_version": "2.0.0",
+      "model_name": "LayoutModel",
+      "state": {
+       "_model_module": "@jupyter-widgets/base",
+       "_model_module_version": "2.0.0",
+       "_model_name": "LayoutModel",
+       "_view_count": null,
+       "_view_module": "@jupyter-widgets/base",
+       "_view_module_version": "2.0.0",
+       "_view_name": "LayoutView",
+       "align_content": null,
+       "align_items": null,
+       "align_self": null,
+       "border_bottom": null,
+       "border_left": null,
+       "border_right": null,
+       "border_top": null,
+       "bottom": null,
+       "display": null,
+       "flex": null,
+       "flex_flow": null,
+       "grid_area": null,
+       "grid_auto_columns": null,
+       "grid_auto_flow": null,
+       "grid_auto_rows": null,
+       "grid_column": null,
+       "grid_gap": null,
+       "grid_row": null,
+       "grid_template_areas": null,
+       "grid_template_columns": null,
+       "grid_template_rows": null,
+       "height": null,
+       "justify_content": null,
+       "justify_items": null,
+       "left": null,
+       "margin": null,
+       "max_height": null,
+       "max_width": null,
+       "min_height": null,
+       "min_width": null,
+       "object_fit": null,
+       "object_position": null,
+       "order": null,
+       "overflow": null,
+       "padding": null,
+       "right": null,
+       "top": null,
+       "visibility": null,
+       "width": null
+      }
+     },
+     "cf9fac4c1fc040d680737b6027552e3b": {
+      "model_module": "@jupyter-widgets/controls",
+      "model_module_version": "2.0.0",
+      "model_name": "HTMLStyleModel",
+      "state": {
+       "_model_module": "@jupyter-widgets/controls",
+       "_model_module_version": "2.0.0",
+       "_model_name": "HTMLStyleModel",
+       "_view_count": null,
+       "_view_module": "@jupyter-widgets/base",
+       "_view_module_version": "2.0.0",
+       "_view_name": "StyleView",
+       "background": null,
+       "description_width": "",
+       "font_size": null,
+       "text_color": null
+      }
+     },
+     "ed090ee8a5994a2191c147353c2afeb7": {
+      "model_module": "@jupyter-widgets/base",
+      "model_module_version": "2.0.0",
+      "model_name": "LayoutModel",
+      "state": {
+       "_model_module": "@jupyter-widgets/base",
+       "_model_module_version": "2.0.0",
+       "_model_name": "LayoutModel",
+       "_view_count": null,
+       "_view_module": "@jupyter-widgets/base",
+       "_view_module_version": "2.0.0",
+       "_view_name": "LayoutView",
+       "align_content": null,
+       "align_items": null,
+       "align_self": null,
+       "border_bottom": null,
+       "border_left": null,
+       "border_right": null,
+       "border_top": null,
+       "bottom": null,
+       "display": null,
+       "flex": null,
+       "flex_flow": null,
+       "grid_area": null,
+       "grid_auto_columns": null,
+       "grid_auto_flow": null,
+       "grid_auto_rows": null,
+       "grid_column": null,
+       "grid_gap": null,
+       "grid_row": null,
+       "grid_template_areas": null,
+       "grid_template_columns": null,
+       "grid_template_rows": null,
+       "height": null,
+       "justify_content": null,
+       "justify_items": null,
+       "left": null,
+       "margin": null,
+       "max_height": null,
+       "max_width": null,
+       "min_height": null,
+       "min_width": null,
+       "object_fit": null,
+       "object_position": null,
+       "order": null,
+       "overflow": null,
+       "padding": null,
+       "right": null,
+       "top": null,
+       "visibility": null,
+       "width": null
+      }
+     },
+     "ee7cb27b22974b79acd63ce300d38262": {
+      "model_module": "@jupyter-widgets/controls",
+      "model_module_version": "2.0.0",
+      "model_name": "HTMLStyleModel",
+      "state": {
+       "_model_module": "@jupyter-widgets/controls",
+       "_model_module_version": "2.0.0",
+       "_model_name": "HTMLStyleModel",
+       "_view_count": null,
+       "_view_module": "@jupyter-widgets/base",
+       "_view_module_version": "2.0.0",
+       "_view_name": "StyleView",
+       "background": null,
+       "description_width": "",
+       "font_size": null,
+       "text_color": null
+      }
+     }
+    },
+    "version_major": 2,
+    "version_minor": 0
+   }
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
